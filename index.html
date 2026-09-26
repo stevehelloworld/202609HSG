@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#18333f" />
+  <title>北九州海岸線｜2026 秋季行程</title>
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+  <style>
+    :root {
+      --ink: oklch(0.25 0.035 220);
+      --deep: oklch(0.29 0.055 220);
+      --sea: oklch(0.48 0.08 205);
+      --amber: oklch(0.72 0.17 65);
+      --amber-soft: oklch(0.94 0.07 82);
+      --bg: oklch(0.99 0 0);
+      --surface: oklch(0.965 0.012 210);
+      --muted: oklch(0.50 0.03 220);
+      --line: oklch(0.89 0.018 210);
+      --shadow: 0 8px 22px oklch(0.2 0.03 220 / 0.08);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; line-height: 1.55; }
+    button, a { font: inherit; }
+    a { color: inherit; }
+    .topbar { background: var(--deep); color: white; padding: 16px clamp(18px, 4vw, 52px); display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: .02em; }
+    .brand-mark { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--amber); color: var(--deep); font-weight: 900; }
+    .top-meta { opacity: .76; font-size: 13px; text-align: right; }
+    .hero { padding: clamp(34px, 7vw, 80px) clamp(18px, 6vw, 92px) 30px; background: radial-gradient(circle at 82% 12%, oklch(0.91 0.11 75 / .7), transparent 28%), var(--surface); }
+    h1 { margin: 0; max-width: 760px; font-size: clamp(36px, 6vw, 72px); line-height: 1.04; letter-spacing: -.035em; text-wrap: balance; }
+    .hero-copy { max-width: 690px; color: var(--muted); font-size: 17px; margin: 20px 0 25px; }
+    .stats { display: flex; flex-wrap: wrap; gap: 10px; }
+    .stat { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; min-width: 132px; box-shadow: 0 3px 10px oklch(.2 .03 220 / .04); }
+    .stat strong { display: block; font-size: 18px; color: var(--deep); }
+    .stat span { font-size: 12px; color: var(--muted); }
+    .app-shell { display: grid; grid-template-columns: minmax(320px, 430px) minmax(0, 1fr); min-height: 690px; }
+    .sidebar { padding: 24px clamp(18px, 3vw, 36px); border-right: 1px solid var(--line); background: white; overflow: auto; }
+    .sidebar-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 16px; }
+    h2 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+    .small-note { color: var(--muted); font-size: 12px; }
+    .day-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 20px; }
+    .day-tab { border: 1px solid var(--line); background: white; color: var(--muted); border-radius: 9px; padding: 8px 2px; cursor: pointer; transition: .18s ease; }
+    .day-tab:hover, .day-tab:focus-visible { border-color: var(--amber); }
+    .day-tab.active { background: var(--deep); color: white; border-color: var(--deep); }
+    .day-tab b, .day-tab span { display: block; }
+    .day-tab b { font-size: 15px; }
+    .day-tab span { font-size: 10px; opacity: .78; }
+    .day-summary { background: var(--amber-soft); border: 1px solid oklch(.83 .10 78); border-radius: 12px; padding: 14px; margin-bottom: 16px; }
+    .day-summary strong { display: block; font-size: 17px; color: var(--deep); }
+    .day-summary p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .timeline { position: relative; padding-left: 26px; }
+    .timeline::before { content: ""; position: absolute; left: 8px; top: 13px; bottom: 18px; width: 2px; background: var(--line); }
+    .stop { position: relative; padding: 0 0 20px; cursor: pointer; }
+    .stop::before { content: ""; position: absolute; left: -23px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: white; border: 3px solid var(--amber); z-index: 1; }
+    .stop.active::before { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-soft); }
+    .stop-time { color: var(--sea); font-size: 12px; font-weight: 800; }
+    .stop h3 { margin: 2px 0 3px; font-size: 17px; }
+    .stop p { margin: 0; color: var(--muted); font-size: 13px; }
+    .stop-tools { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .link-btn { display: inline-flex; align-items: center; border: 0; background: var(--surface); color: var(--deep); padding: 5px 9px; border-radius: 6px; font-size: 12px; text-decoration: none; }
+    .link-btn:hover, .link-btn:focus-visible { background: var(--amber-soft); }
+    .map-panel { position: relative; min-height: 690px; background: #d6e1e1; }
+    #map { position: absolute; inset: 0; min-height: 520px; background: #d6e1e1; }
+    .map-overlay { position: absolute; z-index: 500; top: 18px; left: 18px; background: white; border: 1px solid var(--line); padding: 12px 14px; border-radius: 10px; box-shadow: var(--shadow); max-width: 245px; }
+    .map-overlay strong { display: block; font-size: 14px; }
+    .map-overlay span { color: var(--muted); font-size: 12px; }
+    .legend { position: absolute; z-index: 500; bottom: 18px; right: 18px; background: white; border: 1px solid var(--line); padding: 10px 12px; border-radius: 8px; font-size: 12px; box-shadow: var(--shadow); }
+    .legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; background: var(--amber); margin-right: 5px; }
+    .leaflet-popup-content-wrapper { border-radius: 10px; }
+    .popup-title { font-weight: 800; font-size: 15px; margin-bottom: 3px; }
+    .popup-copy { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .popup-link { color: var(--sea); font-weight: 700; font-size: 12px; }
+    .footer { padding: 20px clamp(18px, 6vw, 92px) 35px; background: var(--deep); color: white; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; }
+    .footer span { opacity: .75; }
+    @media (max-width: 800px) {
+      .topbar { align-items: flex-start; }
+      .top-meta { max-width: 160px; }
+      .app-shell { display: flex; flex-direction: column; }
+      .map-panel { order: -1; min-height: 52vh; height: 520px; }
+      .sidebar { border-right: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">九</span><span>北九州・海岸線自駕</span></div>
+    <div class="top-meta">2026.09.27 — 10.01<br />兩人｜全程租車</div>
+  </header>
+  <section class="hero">
+    <h1>沿著西海岸，<br />把難到的風景一次收進來。</h1>
+    <p class="hero-copy">從佐賀機場出發，經嬉野北上九十九島、平戶與生月島，再沿唐津、呼子回到佐賀。重點放在海岸展望與島嶼公路，跨區移動日留有轉場空間。</p>
+    <div class="stats">
+      <div class="stat"><strong>5 天 4 夜</strong><span>9/27（日）— 10/1（四）</span></div>
+      <div class="stat"><strong>平戶・生月島</strong><span>全程最長的一天，建議早出發</span></div>
+      <div class="stat"><strong>全程租車</strong><span>佐賀機場取還車</span></div>
+    </div>
+  </section>
+  <main class="app-shell">
+    <aside class="sidebar" aria-label="每日行程">
+      <div class="sidebar-head"><h2 id="dayTitle">Day 1 · 抵達與溫泉</h2><span class="small-note" id="dayDistance">約 70 km</span></div>
+      <nav class="day-tabs" aria-label="選擇日期">
+        <button class="day-tab active" data-day="0"><b>27</b><span>日</span></button>
+        <button class="day-tab" data-day="1"><b>28</b><span>一</span></button>
+        <button class="day-tab" data-day="2"><b>29</b><span>二</span></button>
+        <button class="day-tab" data-day="3"><b>30</b><span>三</span></button>
+        <button class="day-tab" data-day="4"><b>01</b><span>四</span></button>
+      </nav>
+      <div class="day-summary"><strong id="dayTagline">落地後先把節奏放慢</strong><p id="dayDescription">取車後往鹿島、嬉野移動，17:00 入住和多屋別莊，享用旅程第一晚的懷石料理與溫泉。</p></div>
+      <div class="timeline" id="timeline"></div>
+    </aside>
+    <section class="map-panel" aria-label="行程地圖">
+      <div id="map"></div>
+      <div class="map-overlay"><strong id="mapDayLabel">Day 1 route</strong><span>點選左側景點定位；虛線只示意停靠順序，不是道路。</span><a class="link-btn" id="dayRouteLink" target="_blank" rel="noopener">開啟 Google Maps 駕車路線 ↗</a></div>
+      <div class="legend"><i></i>當日停靠點示意</div>
+    </section>
+  </main>
+  <footer class="footer"><span>時間為規劃估算；海上活動依當日公告與海況調整</span><span>地圖 © OpenStreetMap contributors</span></footer>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    const days = [
+      { title: 'Day 1 · 抵達與溫泉', distance: '約 70 km', tag: '先保住溫泉旅館的入住時間', desc: '10:35 抵達、11:00 預約取車只留 25 分鐘，入境與交車稍有延誤就會擠壓首站。祐德稻荷是彈性點；優先在 17:00 前到和多屋，並事先確認晚餐場次。', stops: [
+        ['10:35', '佐賀機場', 'IT246 抵達；11:00 預約取車，入境與交車時間偏緊', 33.1536673, 130.3035735, '九州佐賀国際空港 国内線ターミナル'],
+        ['12:30', '祐德稻荷神社（彈性）', '參拜約 60–75 分鐘；午餐安排鹿島或嬉野，若航班延誤或大雨就略過', 33.0739274, 130.1075187, '祐徳稲荷神社 外苑第一駐車場'],
+        ['15:30', '嬉野溫泉街（可選）', '以シーボルトの湯周邊作為步行區域定位；只短暫散步或補給，避免影響 17:00 前抵達旅館', 33.0963326, 129.9852678, 'シーボルトの湯 嬉野温泉'],
+        ['16:30 前', '和多屋別莊', '以 17:00 前抵達為目標；確認 17:30 或 19:30 晚餐，若會遲到先致電', 33.0977127, 129.9890131, '和多屋別荘 嬉野'],
+      ]},
+      { title: 'Day 2 · 九十九島全景', distance: '約 80 km', tag: '展望台＋遊船是主菜，公園看體力加', desc: '早餐後約 9:00 從嬉野出發。展海峰與九十九島觀光公園都是展望點；保留 13:00 遊船，公園作為天氣好、時間充裕時的加選即可。', stops: [
+        ['09:00', '嬉野出發', '早餐後退房；車程與道路狀況以當日導航為準', 33.0977127, 129.9890131, '和多屋別荘 嬉野'],
+        ['10:30', '展海峰', '停留約 30–45 分鐘；標記與導航都指向展望台停車場；低雲或能見度差時不必久留', 33.1314968, 129.6932502, '展海峰 駐車場'],
+        ['13:00', '九十九島遊覽船', '約 50 分鐘；標記在珍珠海度假區遊船乘船處；個人票現場購買，出發前再查官方運航公告', 33.1614127, 129.6791026, '九十九島パールシーリゾート 九十九島遊覧船乗り場'],
+        ['15:00', '九十九島觀光公園（可選）', '視野與展海峰部分重疊；標記及導航指向上段遊客停車場；有時間、天氣好再去，不必硬塞', 33.1228139, 129.6913456, '九十九島観光公園 駐車場'],
+        ['17:30', '佐世保華盛頓飯店', '建議傍晚抵達；停車位先到先得，晚餐可留在佐世保市區', 33.1634622, 129.7285983, '佐世保ワシントンホテル'],
+      ]},
+      { title: 'Day 3 · 平戶與生月島', distance: '約 180 km', tag: '全程最長日：早出發，市區行程做取捨', desc: '平戶城、生月島與唐津串在一天可行，但不是慢遊日。建議 8:00 前離開佐世保；平戶市區的教堂、寺院只挑一兩處，保留時間給生月島並在傍晚前後抵達唐津。', stops: [
+        ['08:00', '佐世保出發', '早餐後提早退房；把跨區車程留足', 33.1634622, 129.7285983, '佐世保ワシントンホテル'],
+        ['09:30', '平戶城', '建議停留約 60–75 分鐘；導航搜尋城方停車場；9 月開館至 18:00', 33.3685412, 129.5575704, '平戸城 駐車場'],
+        ['11:15', '平戶市區午餐', '以平戶港交流廣場停車場作為市區步行起點；午餐後若時間充裕，寺院／教堂之路只挑一兩處短停', 33.3715896, 129.5539976, '平戸港交流広場駐車場'],
+        ['13:00', '生月大橋・道之驛生月大橋', '跨橋後在島側道之驛短停；島上環行也要預留約 1 小時', 33.3550991, 129.4336032, '道の駅 生月大橋'],
+        ['14:15', '大バエ灯台', '生月島北端斷崖燈台；座標落在燈台本體，導航搜尋燈台停車場；看完後即出發往唐津', 33.4398, 129.43038, '大バエ灯台 駐車場'],
+        ['18:00', 'THE NINE STATES HOTEL', '唐津住宿；不含餐，入住前安排晚餐或便利商店補給', 33.457979, 129.9623936, 'THE NINE STATES HOTEL KARATSU'],
+      ]},
+      { title: 'Day 4 · 呼子與玄界灘', distance: '約 90 km', tag: '先朝市、再搭船，唐津城看時間決定', desc: '原本先唐津城、10:30 才到呼子會錯過朝市較好的時段。改為早上呼子朝市、搭七釜イカ丸，再到波戶岬；若時間緊，唐津城列為可選，傍晚回佐賀。', stops: [
+        ['08:00', '唐津出發', '先往呼子；朝市通 7:30–12:00 開市時車輛管制，請導航到停車場再步行', 33.457979, 129.9623936, 'THE NINE STATES HOTEL KARATSU'],
+        ['08:30', '呼子朝市停車場', '地圖標在呼子朝市中心；導航明確指定免費朝市停車場。逛約 60–75 分鐘，開市時不要把車開進朝市通', 33.537679, 129.895134, '呼子朝市駐車場'],
+        ['10:30', 'マリンパル呼子・七釜イカ丸', '從呼子港搭船看七釜，航程約 40 分鐘；海況不佳可能停航', 33.5382268, 129.8938214, 'マリンパル呼子'],
+        ['11:30', '呼子午餐', '以呼子港臨港停車場作為午餐步行區起點；遊船返港後用餐，若改搭 11:30 班則午餐順延', 33.537679, 129.895134, '呼子臨港駐車場'],
+        ['13:30', '波戶岬', '散步看海約 30–45 分鐘；導航指向波戶岬停車場；風雨或能見度差時縮短停留', 33.5554788, 129.8463916, '波戸岬 駐車場'],
+        ['15:00', '唐津城（可選）', '回佐賀途中順路停留；導航搜尋城方停車場；若想早點回飯店可略過', 33.4535289, 129.9781801, '唐津城 駐車場'],
+        ['18:00', 'Hotel New Otani Saga', '佐賀市區住宿；隔天前往機場還車', 33.2495532, 130.2958, 'ホテルニューオータニ佐賀'],
+      ]},
+      { title: 'Day 5 · 回程', distance: '約 15 km', tag: '先把租車還車時間改早', desc: '目前訂單 10:30 還車、11:35 起飛，航空公司在起飛前 45 分鐘停止報到，緩衝太少。請先聯絡 Toyota 改約 9:00–9:30 還車；若未確認提早，這個早晨仍有誤機風險。', stops: [
+        ['08:30', 'Hotel New Otani Saga 出發', '提早退房，預留加油、車況檢查與步行到航廈時間', 33.2495532, 130.2958, 'ホテルニューオータニ佐賀'],
+        ['09:00–09:30', 'Toyota Rent a Car 佐賀空港店', '官方地址為航廈右側租車大樓內；地圖標在國內線航廈旁，導航使用門市全名；建議還車時段仍須向門市確認', 33.1536673, 130.3035735, 'トヨタレンタカー 佐賀空港店'],
+        ['11:35', '佐賀機場', 'IT247 起飛；13:05 抵達桃園', 33.1536673, 130.3035735, '九州佐賀国際空港 国内線ターミナル']
+      ]}
+    ];
+    const map = L.map('map', { zoomControl: false }).setView([33.35, 129.85], 9);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+    let markers = [], route;
+    const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+    function googleLink(lat, lon, query) { return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query || `${lat},${lon}`)}`; }
+    function googleDirectionsLink(stops) {
+      const destination = stops.at(-1);
+      const point = stop => stop[5] || `${stop[3]},${stop[4]}`;
+      const params = new URLSearchParams({
+        api: '1',
+        origin: point(stops[0]),
+        destination: point(destination),
+        travelmode: 'driving'
+      });
+      if (stops.length > 2) params.set('waypoints', stops.slice(1, -1).map(point).join('|'));
+      return `https://www.google.com/maps/dir/?${params.toString()}`;
+    }
+    function renderDay(index, focusIndex = 0) {
+      const day = days[index];
+      document.getElementById('dayTitle').textContent = day.title;
+      document.getElementById('dayDistance').textContent = day.distance;
+      document.getElementById('dayTagline').textContent = day.tag;
+      document.getElementById('dayDescription').textContent = day.desc;
+      document.getElementById('mapDayLabel').textContent = `Day ${index + 1} route`;
+      document.getElementById('dayRouteLink').href = googleDirectionsLink(day.stops);
+      document.querySelectorAll('.day-tab').forEach((el, i) => el.classList.toggle('active', i === index));
+      const timeline = document.getElementById('timeline');
+      timeline.innerHTML = day.stops.map((s, i) => `<article class="stop ${i === focusIndex ? 'active' : ''}" data-stop="${i}"><div class="stop-time">${esc(s[0])}</div><h3>${esc(s[1])}</h3><p>${esc(s[2])}</p><div class="stop-tools"><a class="link-btn" target="_blank" rel="noopener" href="${googleLink(s[3], s[4], s[5])}">↗ 導航</a></div></article>`).join('');
+      markers.forEach(m => map.removeLayer(m)); markers = [];
+      if (route) map.removeLayer(route);
+      const coords = day.stops.map(s => [s[3], s[4]]);
+      route = L.polyline(coords, { color: '#c88724', weight: 4, opacity: .88, dashArray: '9 7' }).addTo(map);
+      day.stops.forEach((s, i) => {
+        const marker = L.circleMarker([s[3], s[4]], { radius: i === focusIndex ? 9 : 7, color: '#18333f', weight: 2, fillColor: '#d99128', fillOpacity: 1 }).addTo(map);
+        marker.bindPopup(`<div class="popup-title">${esc(s[1])}</div><div class="popup-copy">${esc(s[2])}</div><a class="popup-link" target="_blank" rel="noopener" href="${googleLink(s[3], s[4], s[5])}">開啟 Google Maps ↗</a>`);
+        marker.on('click', () => setActiveStop(i)); markers.push(marker);
+      });
+      map.fitBounds(route.getBounds(), { padding: [45, 45], maxZoom: 11 });
+      document.querySelectorAll('.stop').forEach(el => el.addEventListener('click', e => { if (!e.target.closest('a')) setActiveStop(Number(el.dataset.stop)); }));
+    }
+    function setActiveStop(index) {
+      document.querySelectorAll('.stop').forEach((el, i) => el.classList.toggle('active', i === index));
+      markers.forEach((m, i) => m.setStyle({ radius: i === index ? 9 : 7 }));
+      const stop = days[currentDay].stops[index];
+      map.setView([stop[3], stop[4]], Math.max(map.getZoom(), 12), { animate: true });
+      markers[index].openPopup();
+    }
+    let currentDay = 0;
+    document.querySelectorAll('.day-tab').forEach(btn => btn.addEventListener('click', () => { currentDay = Number(btn.dataset.day); renderDay(currentDay); }));
+    renderDay(0);
+  </script>
+</body>
+</html>
